@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const encryption = require('../config/encryption');
 
 const userSchema = mongoose.Schema({
     email: {
@@ -37,7 +38,8 @@ const userSchema = mongoose.Schema({
         type: mongoose.Schema.Types.String,
     },
     roles: [{
-        type: mongoose.Schema.Types.String
+        type: mongoose.Schema.Types.String,
+        default: 'User'
     }]
 });
 userSchema.method({
@@ -49,3 +51,25 @@ userSchema.method({
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
+module.exports.seedAdmin = () => {
+    User.find({}).then((users) => {
+        if (users.length > 0) return
+
+        let salt = encryption.generateSalt();
+        let hashedPass = encryption.generateHashedPassword(salt, 'admin123');
+
+        User.create({
+            email: 'admin@mail.com',
+            username: 'admin',
+            followers: [],
+            following: [],
+            barks: [],
+            hashedPass: hashedPass,
+            salt: salt,
+            roles: ['Admin'],
+            picture: ''
+        });
+
+        console.log('Seed complete.');
+    });
+}

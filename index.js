@@ -7,6 +7,7 @@ const app = express();
 
 require('./database/database')(settings);
 require('./config/express')(app);
+require('./routes/index')(app);
 
 app.listen(settings.port, () => {
     console.log(`Listening on ${settings.port}`);

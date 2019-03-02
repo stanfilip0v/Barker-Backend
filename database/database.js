@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const User = require('../models/User');
 mongoose.Promise = global.Promise;
 
 module.exports = (settings) => {
@@ -13,6 +14,7 @@ module.exports = (settings) => {
             throw err;
         }
 
+        User.seedAdmin();
         console.log('Database ready.');
     });
 
