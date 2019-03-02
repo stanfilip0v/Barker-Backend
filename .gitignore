@@ -1,3 +1,4 @@
 node_modules
 config/encryption.js
 config/settings.js
+package-lock.json

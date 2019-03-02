@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const User = require('../models/User');
 const encryption = require('../config/encryption');
+const jwt = require('jsonwebtoken');
 const { body } = require('express-validator/check');
 const { validationResult } = require('express-validator/check');
 
@@ -10,9 +11,9 @@ const validation = [
         .withMessage('Please enter a valid Email!')
         .custom((value) => {
             return User.findOne({ email: value })
-                    .then((user) => {
-                        if (user) return Promise.reject('E-Mail address already exists!');
-                    });
+                .then((user) => {
+                    if (user) return Promise.reject('E-Mail address already exists!');
+                });
         }),
     body('password')
         .trim()
@@ -24,9 +25,9 @@ const validation = [
         .withMessage('Please enter a valid username!')
         .custom((value) => {
             return User.findOne({ username: value })
-                    .then((user) => {
-                        if (user) return Promise.reject('Username address already exists!');
-                    });
+                .then((user) => {
+                    if (user) return Promise.reject('Username address already exists!');
+                });
         })
 ]
 
@@ -44,7 +45,7 @@ function validateInput(req, res) {
     return true;
 }
 
-function signUp(req, res) {
+function signUp(req, res, next) {
     if (validateInput(req, res)) {
         const { email, username, password } = req.body;
         const salt = encryption.generateSalt();
@@ -72,7 +73,47 @@ function signUp(req, res) {
     }
 }
 
+function signIn(req, res, next) {
+    const { email, password } = req.body;
+    User.findOne({ email }).then((user) => {
+        if (!user) {
+            const error = new Error('A user with this email could not be found');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        if (!user.authenticate(password)) {
+            const error = new Error('Invalid password!');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const token = jwt.sign({
+            email: user.email,
+            userId: user._id.toString(),
+            isAdmin: user.roles.includes('Admin')
+        },
+            encryption.jwtSecret,
+            { expiresIn: '1h' });
+
+        res.status(200)
+            .json({
+                message: 'Login successful',
+                token,
+                userId: user._id.toString(),
+                isAdmin: user.roles.includes('Admin')
+            });
+    }).catch((error) => {
+        if (!error.statusCode) {
+            error.statusCode = 500
+        }
+
+        next(error);
+    });
+}
+
 router
-    .post('/signup', validation, signUp);
+    .post('/signup', validation, signUp)
+    .post('/signin', signIn);
 
 module.exports = router;
