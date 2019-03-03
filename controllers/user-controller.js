@@ -2,8 +2,7 @@ const router = require('express').Router();
 const User = require('../models/User');
 const encryption = require('../config/encryption');
 const jwt = require('jsonwebtoken');
-const { body } = require('express-validator/check');
-const { validationResult } = require('express-validator/check');
+const { validationResult, body } = require('express-validator/check');
 
 const validation = [
     body('email')
