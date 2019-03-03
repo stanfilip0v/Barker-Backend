@@ -2,6 +2,7 @@ const router = require('express').Router();
 const Bark = require('../models/Bark');
 const User = require('../models/User');
 const Comment = require('../models/Comment');
+const Report = require('../models/Report');
 const { validationResult, body } = require('express-validator/check');
 const auth = require('../middleware/auth');
 
@@ -86,8 +87,10 @@ function deleteBark(req, res, next) {
         }
 
         return Bark.findByIdAndDelete(barkId);
-    }).then((bark) => {
-        return Comment.deleteMany({ bark: bark._id });
+    }).then(() => {
+        return Comment.deleteMany({ bark: barkId });
+    }).then(() => {
+        return Report.deleteMany({ bark: barkId });
     }).then(() => {
         return User.findById(userId);
     }).then((user) => {
