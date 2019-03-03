@@ -10,7 +10,7 @@ const validation = [
     body('content')
         .trim()
         .isLength({ min: 1 })
-        .withMessage('Bark needs to have at least 1 character!')
+        .withMessage('Input needs to have at least 1 character!')
 ]
 
 function validateInput(req, res) {
@@ -48,7 +48,7 @@ function createBark(req, res, next) {
             if (!error.statusCode) {
                 res.status(500)
             }
-            
+
             next(error);
         });
     }
@@ -99,23 +99,66 @@ function getBarkById(req, res, next) {
     const { id: barkId } = req.params;
 
     Bark.findById(barkId)
-        .populate('comments')
+        .populate({
+            path: 'comments',
+            populate: {
+                path: 'creator'
+            }
+        })
         .populate('creator')
         .then((bark) => {
             res.status(200)
-                .json({ message: 'Bark fethced successfully', bark })
+                .json({
+                    message: 'Bark fetched successfully!',
+                    bark
+                });
         }).catch((error) => {
             if (!error.statusCode) {
                 error.statusCode = 500;
             }
-    
+
             next(error);
         });
+}
+
+function createComment(req, res, next) {
+    if (validateInput(req, res)) {
+        const { id: barkId } = req.params;
+        const { content } = req.body;
+        const { userId } = req;
+
+        Comment.create({
+            content,
+            creator: userId,
+            bark: barkId
+        }).then((comment) => {
+            Bark.findById(barkId).then((bark) => {
+                bark.comments.push(comment._id);
+                bark.save();
+
+                res.status(201)
+                    .json({ message: 'Comment created successfully', comment });
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    error.statusCode = 500;
+                }
+
+                next(error);
+            });
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500;
+            }
+
+            next(error);
+        });
+    }
 }
 
 router
     .post('/create', validation, auth.isAuth, createBark)
     .get('/:id', auth.isAuth, getBarkById)
+    .post('/:id/comment', validation, auth.isAuth, createComment)
     .delete('/:id/delete', auth.isAuth, deleteBark)
 
 module.exports = router;
