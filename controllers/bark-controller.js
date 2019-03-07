@@ -27,19 +27,37 @@ function validateInput(req, res) {
     return true;
 }
 
-function getAllBarks(req, res, next) {
-    Bark.find()
-        .populate('creator')
-        .then((barks) => {
-            res.status(200)
-                .json({ message: 'Barks fetched', barks });
-        }).catch((error) => {
-            if (!error.statusCode) {
-                res.status(500)
-            }
+function getBarksByFollowing(req, res, next) {
+    const { userId } = req;
+    const barksByFollowing = [];
 
-            next(error);
-        })
+    User.findById(userId).then((user) => {
+        Bark.find()
+            .populate('creator')
+            .then((barks) => {
+                for (const bark of barks) {
+                    for (const following of user.following) {
+                        following.toString() === bark.creator._id.toString() ? barksByFollowing.push(bark) : null;
+                    }
+                }
+
+                res.status(200)
+                    .json({ message: 'Barks fetched!', barksByFollowing });
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    res.status(500)
+                }
+
+                next(error);
+            });
+
+    }).catch((error) => {
+        if (!error.statusCode) {
+            res.status(500)
+        }
+
+        next(error);
+    });
 }
 
 function createBark(req, res, next) {
@@ -138,7 +156,8 @@ function getBarkById(req, res, next) {
 
 router
     .post('/create', validation, auth.isAuth, createBark)
-    .get('/:barkId', auth.isAuth, getBarkById)
+    .get('/getBarksByFollowing', auth.isAuth, getBarksByFollowing)
+    .get('/details/:barkId', auth.isAuth, getBarkById)
     .delete('/:barkId/delete', auth.isAuth, deleteBark)
 
 module.exports = router;

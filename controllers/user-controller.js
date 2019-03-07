@@ -74,41 +74,46 @@ function signUp(req, res, next) {
 
 function signIn(req, res, next) {
     const { email, password } = req.body;
-    User.findOne({ email }).then((user) => {
-        if (!user) {
-            const error = new Error('A user with this email could not be found');
-            error.statusCode = 401;
-            throw error;
-        }
+    User.findOne({ email })
+        .populate('barks')
+        .populate('following')
+        .populate('followers')
+        .then((user) => {
+            if (!user) {
+                const error = new Error('A user with this email could not be found');
+                error.statusCode = 401;
+                throw error;
+            }
 
-        if (!user.authenticate(password)) {
-            const error = new Error('Invalid password!');
-            error.statusCode = 401;
-            throw error;
-        }
+            if (!user.authenticate(password)) {
+                const error = new Error('Invalid password!');
+                error.statusCode = 401;
+                throw error;
+            }
 
-        const token = jwt.sign({
-            email: user.email,
-            userId: user._id.toString(),
-            isAdmin: user.roles.includes('Admin')
-        },
-            encryption.jwtSecret,
-            { expiresIn: '1h' });
-
-        res.status(200)
-            .json({
-                message: 'Login successful',
-                token,
+            const token = jwt.sign({
+                email: user.email,
                 userId: user._id.toString(),
                 isAdmin: user.roles.includes('Admin')
-            });
-    }).catch((error) => {
-        if (!error.statusCode) {
-            error.statusCode = 500
-        }
+            },
+                encryption.jwtSecret,
+                { expiresIn: '1h' });
 
-        next(error);
-    });
+            res.status(200)
+                .json({
+                    message: 'Login successful',
+                    token,
+                    userId: user._id.toString(),
+                    username: user.username,
+                    isAdmin: user.roles.includes('Admin')
+                });
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500
+            }
+
+            next(error);
+        });
 }
 
 router
