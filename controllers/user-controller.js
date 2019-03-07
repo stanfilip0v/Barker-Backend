@@ -3,6 +3,7 @@ const User = require('../models/User');
 const encryption = require('../config/encryption');
 const jwt = require('jsonwebtoken');
 const { validationResult, body } = require('express-validator/check');
+const auth = require('../middleware/auth');
 
 const validation = [
     body('email')
@@ -57,8 +58,9 @@ function signUp(req, res, next) {
             barks: [],
             followers: [],
             following: [],
+            likedBarks: [],
             roles: ['User'],
-            picture: ''
+            picture: '/user-picture.png'
         }).then((user) => {
             res.status(201)
                 .json({ message: 'User created!', userId: user._id })
@@ -116,8 +118,30 @@ function signIn(req, res, next) {
         });
 }
 
+function getUserById(req, res, next) {
+    const { userId } = req;
+
+    User.findById(userId)
+        .populate('barks')
+        .then((user) => {
+            user = user.toObject();
+            delete user.hashedPass;
+            delete user.salt;
+            
+            res.status(200)
+                .json(user);
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500
+            }
+
+            next(error);
+        });
+}
+
 router
     .post('/signup', validation, signUp)
-    .post('/signin', signIn);
+    .post('/signin', signIn)
+    .get('/:userId', auth.isAuth, getUserById);
 
 module.exports = router;

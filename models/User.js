@@ -69,6 +69,7 @@ module.exports.seedAdmin = () => {
             followers: [],
             following: [],
             barks: [],
+            likedBarks: [],
             hashedPass: hashedPass,
             salt: salt,
             roles: ['Admin'],
