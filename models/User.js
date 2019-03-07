@@ -34,8 +34,13 @@ const userSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    likedBarks: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Bark'
+    }],
     picture: {
         type: mongoose.Schema.Types.String,
+        default: '/user-picture.png'
     },
     roles: [{
         type: mongoose.Schema.Types.String,
@@ -67,7 +72,6 @@ module.exports.seedAdmin = () => {
             hashedPass: hashedPass,
             salt: salt,
             roles: ['Admin'],
-            picture: ''
         });
 
         console.log('Seed complete.');

@@ -39,6 +39,8 @@ function getBarksByFollowing(req, res, next) {
                     for (const following of user.following) {
                         following.toString() === bark.creator._id.toString() ? barksByFollowing.push(bark) : null;
                     }
+
+                    userId === bark.creator._id.toString() ? barksByFollowing.push(bark) : null;
                 }
 
                 res.status(200)
