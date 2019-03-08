@@ -119,7 +119,7 @@ function signIn(req, res, next) {
 }
 
 function getUserById(req, res, next) {
-    const { userId } = req;
+    const { userId } = req.params;
 
     User.findById(userId)
         .populate('barks')
@@ -127,7 +127,7 @@ function getUserById(req, res, next) {
             user = user.toObject();
             delete user.hashedPass;
             delete user.salt;
-            
+
             res.status(200)
                 .json(user);
         }).catch((error) => {
@@ -139,9 +139,64 @@ function getUserById(req, res, next) {
         });
 }
 
+async function followUser(req, res, next) {
+    const { userId } = req;
+    const { userId: userToFollowId } = req.params;
+
+    if (userId === userToFollowId) {
+        return res.status(400)
+            .json({ error: `You can't follow yourself` });
+    }
+
+    User.findById(userId).then((user) => {
+        User.findById(userToFollowId)
+            .populate('barks')
+            .then((userToFollow) => {
+                let isFollowing = user.following.some(function (followingUser) {
+                    return followingUser.equals(userToFollowId);
+                });
+                let isFollower = userToFollow.followers.some(function (followersUser) {
+                    return followersUser.equals(userId);
+                });
+
+                if (isFollower && isFollowing) {
+                    user.following.pull(userToFollowId);
+                    userToFollow.followers.pull(userId);
+                    user.save();
+                    userToFollow.save();
+                } else if (!isFollower && !isFollowing) {
+                    user.following.push(userToFollowId);
+                    userToFollow.followers.push(userId);
+                    user.save();
+                    userToFollow.save();
+                }
+
+                userToFollow = userToFollow.toObject();
+                delete userToFollow.hashedPass;
+                delete userToFollow.salt;
+
+                res.status(200)
+                    .json(userToFollow);
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    error.statusCode = 500
+                }
+
+                next(error);
+            });
+    }).catch((error) => {
+        if (!error.statusCode) {
+            error.statusCode = 500
+        }
+
+        next(error);
+    });
+}
+
 router
     .post('/signup', validation, signUp)
     .post('/signin', signIn)
+    .post('/follow/:userId', auth.isAuth, followUser)
     .get('/:userId', auth.isAuth, getUserById);
 
 module.exports = router;

@@ -75,10 +75,16 @@ function createBark(req, res, next) {
             User.findById(userId).then((user) => {
                 user.barks.push(bark._id);
                 user.save();
+            }).then(() => {
+                res.status(201)
+                    .json({ message: 'Bark created!', bark });
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    res.status(500)
+                }
+    
+                next(error);
             });
-
-            res.status(201)
-                .json({ message: 'Bark created!', bark });
         }).catch((error) => {
             if (!error.statusCode) {
                 res.status(500)
