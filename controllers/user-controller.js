@@ -139,7 +139,7 @@ function getUserById(req, res, next) {
         });
 }
 
-async function followUser(req, res, next) {
+function followUser(req, res, next) {
     const { userId } = req;
     const { userId: userToFollowId } = req.params;
 
@@ -193,10 +193,87 @@ async function followUser(req, res, next) {
     });
 }
 
+function getSuggested(req, res, next) {
+    const { userId } = req;
+    const suggestedUsers = [];
+
+    Array.prototype.diff = function(a) {
+        return this.filter(function(i) {return a.indexOf(i) < 0;});
+    };
+
+    User.findById(userId)
+        .populate('following')
+        .then((user) => {
+            User.find().then((users) => {
+                users.splice(users.findIndex((u) => u._id.toString() === userId), 1);
+                if (user.following.length === 0) {
+                    return res.status(200)
+                        .json(users);
+                }
+
+                const followingToString = [];
+                for (const followedUser of user.following) {
+                    followingToString.push(followedUser._id.toString());
+                }
+
+
+                for (const followedUser of user.following) {
+                    for (const nestedFollowedUser of followedUser.following) {
+                        if (!followingToString.includes(nestedFollowedUser._id.toString()) && nestedFollowedUser._id.toString() !== userId) {
+                            followingToString.push(nestedFollowedUser._id.toString());
+
+                            const suggestedUser = users.find((u) => u._id.toString() === nestedFollowedUser._id.toString()).toObject();
+                            suggestedUser.followedBy = followedUser.username;
+                            delete suggestedUser.salt;
+                            delete suggestedUser.hashedPass;
+                            suggestedUsers.push(suggestedUser);
+                        }
+                    }
+                }
+
+                if (suggestedUsers.length > 0) {
+                    res.status(200)
+                        .json(suggestedUsers);
+                } else {
+                    const usersToString = [];
+                    for (const user of users) {
+                        usersToString.push(user._id.toString());
+                    }
+
+                    const usersLeftToString = usersToString.diff(followingToString);
+                    const usersLeft = [];
+                    for (let userId of usersLeftToString) {
+                        let user = users.find((u) => u._id.toString() === userId).toObject();
+                        delete user.salt;
+                        delete user.hashedPass;
+                        usersLeft.push(user);
+                    }
+
+                    res.status(200)
+                        .json(usersLeft);
+                }
+
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    error.statusCode = 500
+                }
+
+                next(error);
+            });
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500
+            }
+
+            next(error);
+        });
+}
+
 router
     .post('/signup', validation, signUp)
     .post('/signin', signIn)
+    .get('/suggested', auth.isAuth, getSuggested)
     .post('/follow/:userId', auth.isAuth, followUser)
-    .get('/:userId', auth.isAuth, getUserById);
+    .get('/profile/:userId', auth.isAuth, getUserById);
 
 module.exports = router;
