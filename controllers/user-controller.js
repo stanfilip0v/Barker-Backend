@@ -197,8 +197,8 @@ function getSuggested(req, res, next) {
     const { userId } = req;
     const suggestedUsers = [];
 
-    Array.prototype.diff = function(a) {
-        return this.filter(function(i) {return a.indexOf(i) < 0;});
+    Array.prototype.diff = function (a) {
+        return this.filter(function (i) { return a.indexOf(i) < 0; });
     };
 
     User.findById(userId)
@@ -269,10 +269,48 @@ function getSuggested(req, res, next) {
         });
 }
 
+function getFollowing(req, res, next) {
+    const { username } = req.params;
+
+    User.findOne({ username })
+        .populate('following')
+        .then((user) => {
+            const followingUsers = user.following;
+            return res.status(200)
+                .json(followingUsers);
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500
+            }
+
+            next(error);
+        });
+}
+
+function getFollowers(req, res, next) {
+    const { username } = req.params;
+
+    User.findOne({ username })
+        .populate('followers')
+        .then((user) => {
+            const followers = user.followers;
+            return res.status(200)
+                .json(followers);
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500
+            }
+
+            next(error);
+        });
+}
+
 router
     .post('/signup', validation, signUp)
     .post('/signin', signIn)
     .get('/suggested', auth.isAuth, getSuggested)
+    .get('/following/:username', auth.isAuth, getFollowing)
+    .get('/followers/:username', auth.isAuth, getFollowers)
     .post('/follow/:userId', auth.isAuth, followUser)
     .get('/profile/:userId', auth.isAuth, getUserById);
 
