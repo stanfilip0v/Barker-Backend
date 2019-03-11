@@ -162,9 +162,53 @@ function getBarkById(req, res, next) {
         });
 }
 
+function likeBark(req, res, next) {
+    const { barkId } = req.params;
+    const { userId } = req;
+
+    User.findById(userId).then((user) => {
+        Bark.findById(barkId).then((bark) => {
+            const isLiked = user.likedBarks.some((b) => {
+                return b.equals(barkId);
+            });
+            let liked;
+
+            if (isLiked) {
+                user.likedBarks.pull(barkId);
+                bark.likes -= 1;
+                liked = false;
+            } else {
+                user.likedBarks.push(barkId);
+                bark.likes += 1;
+                liked = true;
+            }
+
+            user.save();
+            bark.save();
+
+            res.status(200)
+                .json({ isLiked: liked })
+        }).catch((error) => {
+            if (!error.statusCode) {
+                error.statusCode = 500;
+            }
+
+            next(error);
+        });
+    }).catch((error) => {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+
+        next(error);
+    });
+
+}
+
 router
     .post('/create', validation, auth.isAuth, createBark)
     .get('/getBarksByFollowing', auth.isAuth, getBarksByFollowing)
+    .post('/like/:barkId', auth.isAuth, likeBark)
     .get('/details/:barkId', auth.isAuth, getBarkById)
     .delete('/:barkId/delete', auth.isAuth, deleteBark)
 
