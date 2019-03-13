@@ -168,6 +168,12 @@ function likeBark(req, res, next) {
 
     User.findById(userId).then((user) => {
         Bark.findById(barkId)
+            .populate({
+                path: 'comments',
+                populate: {
+                    path: 'creator'
+                }
+            })
             .populate('creator')
             .then((bark) => {
                 const isLiked = user.likedBarks.some((b) => {
