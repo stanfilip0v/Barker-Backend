@@ -46,7 +46,14 @@ function createReport(req, res, next) {
 }
 
 function getAllReports(req, res, next) {
-    Report.find().then((reports) => {
+    Report.find()
+    .populate({
+        path: 'bark',
+        populate: {
+            path: 'creator'
+        }
+    })
+    .then((reports) => {
         res.status(201)
             .json({ message: 'Reports fetched', reports });
     }).catch((error) => {
@@ -59,7 +66,19 @@ function getAllReports(req, res, next) {
 }
 
 function deleteReport(req, res, next) {
-    
+    const { reportId } = req.params;
+    Report.findByIdAndDelete(reportId).then(() => {
+        res.status(200)
+            .json({
+                message: 'Report deleted successfully!'
+            });
+    }).catch((error) => {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+
+        next(error);
+    });
 }
 
 router

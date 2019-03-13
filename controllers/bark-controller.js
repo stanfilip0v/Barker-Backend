@@ -82,7 +82,7 @@ function createBark(req, res, next) {
                 if (!error.statusCode) {
                     res.status(500)
                 }
-    
+
                 next(error);
             });
         }).catch((error) => {
@@ -167,34 +167,36 @@ function likeBark(req, res, next) {
     const { userId } = req;
 
     User.findById(userId).then((user) => {
-        Bark.findById(barkId).then((bark) => {
-            const isLiked = user.likedBarks.some((b) => {
-                return b.equals(barkId);
+        Bark.findById(barkId)
+            .populate('creator')
+            .then((bark) => {
+                const isLiked = user.likedBarks.some((b) => {
+                    return b.equals(barkId);
+                });
+                let liked;
+
+                if (isLiked) {
+                    user.likedBarks.pull(barkId);
+                    bark.likes -= 1;
+                    liked = false;
+                } else {
+                    user.likedBarks.push(barkId);
+                    bark.likes += 1;
+                    liked = true;
+                }
+
+                user.save();
+                bark.save();
+
+                res.status(200)
+                    .json({ isLiked: liked, bark })
+            }).catch((error) => {
+                if (!error.statusCode) {
+                    error.statusCode = 500;
+                }
+
+                next(error);
             });
-            let liked;
-
-            if (isLiked) {
-                user.likedBarks.pull(barkId);
-                bark.likes -= 1;
-                liked = false;
-            } else {
-                user.likedBarks.push(barkId);
-                bark.likes += 1;
-                liked = true;
-            }
-
-            user.save();
-            bark.save();
-
-            res.status(200)
-                .json({ isLiked: liked })
-        }).catch((error) => {
-            if (!error.statusCode) {
-                error.statusCode = 500;
-            }
-
-            next(error);
-        });
     }).catch((error) => {
         if (!error.statusCode) {
             error.statusCode = 500;
